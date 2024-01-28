@@ -5,7 +5,11 @@ export const metadata = {
   description: "hubcamp.com.br",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="pt-br">
       <body>{children}</body>
