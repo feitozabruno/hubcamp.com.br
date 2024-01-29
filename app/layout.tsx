@@ -1,4 +1,4 @@
-import React from "react";
+import { getCssText } from "@/app/styles/stitches.config";
 
 export const metadata = {
   title: "HubCamp",
@@ -12,6 +12,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
+      <head>
+        <style
+          id="stitches"
+          dangerouslySetInnerHTML={{ __html: getCssText() }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
