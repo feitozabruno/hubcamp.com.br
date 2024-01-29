@@ -1,4 +1,6 @@
+import { roboto } from "@/app/styles/fonts";
 import { getCssText } from "@/app/styles/stitches.config";
+import { globalStyles } from "./styles/global";
 
 export const metadata = {
   title: "HubCamp",
@@ -10,6 +12,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  globalStyles();
   return (
     <html lang="pt-br">
       <head>
@@ -18,7 +21,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: getCssText() }}
         />
       </head>
-      <body>{children}</body>
+      <body className={`${roboto.className} antialiased`}>{children}</body>
     </html>
   );
 }
