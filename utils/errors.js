@@ -17,10 +17,10 @@ export class BaseError extends Error {
 }
 
 export class ValidationError extends BaseError {
-  constructor() {
+  constructor(message) {
     super(
       "validation_error",
-      "Todos os campos (name, username, email, password) são obrigatórios.",
+      message,
       "Verifique os campos enviados e tente novamente.",
       400,
     );
@@ -49,8 +49,25 @@ export class DuplicateEntryError extends BaseError {
   }
 }
 
+export class NotFoundError extends BaseError {
+  constructor(resource) {
+    super(
+      "not_found_error",
+      `${resource} não encontrado.`,
+      `Verifique se o ${resource} existe e tente novamente.`,
+      404,
+    );
+  }
+}
+
 export function handleError(err) {
   if (err instanceof ValidationError) {
+    return Response.json(err, {
+      status: err.status_code,
+    });
+  }
+
+  if (err instanceof NotFoundError) {
     return Response.json(err, {
       status: err.status_code,
     });
