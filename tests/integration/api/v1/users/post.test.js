@@ -44,8 +44,7 @@ describe("POST /api/v1/users", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       name: "validation_error",
-      message:
-        "Todos os campos (name, username, email, password) são obrigatórios.",
+      message: "Todos os campos são obrigatórios.",
       action: "Verifique os campos enviados e tente novamente.",
       status_code: 400,
     });

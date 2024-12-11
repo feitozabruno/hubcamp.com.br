@@ -6,7 +6,7 @@ export async function POST(request) {
     const { name, username, email, password } = await request.json();
 
     if (!name || !username || !email || !password) {
-      throw new ValidationError();
+      throw new ValidationError("Todos os campos são obrigatórios.");
     }
 
     await database.query(
@@ -19,8 +19,6 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (err) {
-    console.log(err);
-
     return handleError(err);
   }
 }
