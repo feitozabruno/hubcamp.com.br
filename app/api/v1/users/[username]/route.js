@@ -29,38 +29,38 @@ export async function PUT(request, { params }) {
     try {
       body = await request.json();
     } catch {
-      throw new ValidationError("Corpo da requisição está vazio.");
+      throw new ValidationError("Corpo da requisição inválido ou está vazio.");
     }
-
-    body.id && delete body.id;
-    body.created_at && delete body.created_at;
 
     if (!body || Object.keys(body).length === 0) {
       throw new ValidationError("Nenhum dado para atualizar foi enviado.");
     }
 
-    // Se o próprio username está sendo alterado, gerencie o caso
-    const newUsername = body.username;
-    delete body.username; // Remover o username do corpo para evitar problemas na query dinâmica
+    const updatableFields = ["name", "username", "email", "password"];
 
-    // Monta a query dinamicamente com base nos campos fornecidos
+    const updateData = Object.keys(body)
+      .filter((field) => updatableFields.includes(field))
+      .reduce((acc, field) => {
+        acc[field] = body[field];
+        return acc;
+      }, {});
+
+    if (Object.keys(updateData).length === 0) {
+      throw new ValidationError(
+        "Nenhum campo permitido para atualização foi enviado.",
+      );
+    }
+
     const setClauses = [];
     const values = [];
     let index = 1;
 
-    for (const [key, value] of Object.entries(body)) {
-      setClauses.push(`${key} = $${index++}`);
+    for (const [key, value] of Object.entries(updateData)) {
+      setClauses.push(`${key} = $${index}`);
       values.push(value);
-    }
-
-    // Adiciona a atualização do username, se presente
-    if (newUsername) {
-      setClauses.push(`username = $${index}`);
-      values.push(newUsername);
       index++;
     }
 
-    // Adiciona o username atual como condição na query
     const query = `
       UPDATE users
       SET ${setClauses.join(", ")}
