@@ -1,5 +1,10 @@
 import database from "infra/database";
-import { handleError, NotFoundError, ValidationError } from "utils/errors";
+import {
+  handleError,
+  NotFoundError,
+  RequestBodyError,
+  ValidationError,
+} from "utils/errors";
 
 export async function GET(request, { params }) {
   const { username } = await params;
@@ -29,7 +34,7 @@ export async function PUT(request, { params }) {
     try {
       body = await request.json();
     } catch {
-      throw new ValidationError("Corpo da requisição inválido ou está vazio.");
+      throw new RequestBodyError();
     }
 
     if (!body || Object.keys(body).length === 0) {
