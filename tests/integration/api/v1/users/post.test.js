@@ -1,77 +1,64 @@
-import { POST } from "app/api/v1/users/route.js";
-import database from "infra/database";
+import orchestrator from "tests/orchestrator";
 
-// Mock do banco de dados
-jest.mock("infra/database");
+beforeAll(async () => {
+  await orchestrator.waitForAllServices();
+  await orchestrator.clearDatabase();
+  await orchestrator.runMigrations();
+});
 
 describe("POST /api/v1/users", () => {
-  it("should create a user successfully", async () => {
-    // Configura o mock para retornar uma resposta simulada
-    database.query.mockResolvedValueOnce({}); // Simula que o banco não retornou erro
+  describe("User Creation", () => {
+    describe("Valid cases", () => {
+      test("should create a user with all valid fields", async () => {
+        const userData = {
+          name: "Test User",
+          username: "testuser",
+          email: "testuser@example.com",
+          password: "password123",
+        };
 
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "John Doe",
-        username: "john123",
-        email: "john@example.com",
-        password: "password123",
-      }),
-    };
+        const response = await fetch("http://localhost:3000/api/v1/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        });
 
-    const response = await POST(mockRequest); // Chama o seu endpoint
+        expect(response.status).toBe(201);
 
-    // Verifica se a resposta é a esperada
-    expect(response.status).toBe(201);
-    expect(await response.json()).toEqual({
-      message: "Usuário john123 criado com sucesso!",
-    });
-  });
+        const responseBody = await response.json();
 
-  it("should handle validation error", async () => {
-    // Mocka o erro de validação
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "", // Nome vazio, simulando erro de validação
-        username: "john123",
-        email: "john@example.com",
-        password: "password123",
-      }),
-    };
+        expect(responseBody).toEqual({
+          message: "Usuário testuser criado com sucesso!",
+        });
+      });
 
-    const response = await POST(mockRequest); // Chama o seu endpoint
+      test("should throw an error if a required field is missing", async () => {
+        const invalidUserData = {
+          name: "Incomplete User",
+          email: "incomplete@example.com",
+        };
 
-    // Verifica se o erro foi tratado corretamente
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      name: "validation_error",
-      message: "Todos os campos são obrigatórios.",
-      action: "Verifique os campos enviados e tente novamente.",
-      status_code: 400,
-    });
-  });
+        const response = await fetch("http://localhost:3000/api/v1/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(invalidUserData),
+        });
 
-  it("should handle database errors", async () => {
-    // Simula erro no banco de dados (exemplo: erro de conexão)
-    database.query.mockRejectedValueOnce(new Error("Database error"));
+        expect(response.status).toBe(400);
 
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "John Doe",
-        username: "john123",
-        email: "john@example.com",
-        password: "password123",
-      }),
-    };
+        const responseBody = await response.json();
 
-    const response = await POST(mockRequest); // Chama o seu endpoint
-
-    // Verifica se o erro foi tratado corretamente
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      name: "internal_server_error",
-      message: "Erro interno no servidor.",
-      action: "Tente novamente mais tarde ou contate o suporte.",
-      status_code: 500,
+        expect(responseBody).toEqual({
+          action: "Verifique os campos enviados e tente novamente.",
+          message: "Todos os campos são obrigatórios.",
+          name: "validation_error",
+          status_code: 400,
+        });
+      });
     });
   });
 });
