@@ -1,21 +1,20 @@
-import database from "infra/database";
-import { handleError, ValidationError } from "utils/errors";
+import { createUser } from "infra/models/userModel.js";
+import { handleError, RequestBodyError } from "utils/errors";
 
 export async function POST(request) {
   try {
-    const { name, username, email, password } = await request.json();
+    let userData;
 
-    if (!name || !username || !email || !password) {
-      throw new ValidationError("Todos os campos são obrigatórios.");
+    try {
+      userData = await request.json();
+    } catch {
+      throw new RequestBodyError();
     }
 
-    await database.query(
-      "INSERT INTO users (name, username, email, password) VALUES ($1, $2, $3, $4)",
-      [name, username, email, password],
-    );
+    await createUser(userData);
 
     return Response.json(
-      { message: `Usuário ${username} criado com sucesso!` },
+      { message: `Usuário ${userData.username} criado com sucesso!` },
       { status: 201 },
     );
   } catch (err) {
