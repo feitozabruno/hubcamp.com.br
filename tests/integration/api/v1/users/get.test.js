@@ -1,63 +1,58 @@
-import { GET } from "app/api/v1/users/[username]/route.js";
-import database from "infra/database";
+import orchestrator from "tests/orchestrator";
 
-// Mock do banco de dados
-jest.mock("infra/database");
+beforeAll(async () => {
+  await orchestrator.waitForAllServices();
+  await orchestrator.clearDatabase();
+  await orchestrator.runMigrations();
+});
 
-describe("GET /api/v1/users/[username]", () => {
-  it("should return user details successfully", async () => {
-    const mockUser = {
-      id: 1,
-      name: "John Doe",
-      username: "john123",
-      email: "john@example.com",
-    };
+describe("GET /api/v1/users[username]", () => {
+  describe("User fetch", () => {
+    describe("Valid cases", () => {
+      test("should return the data of an existing user", async () => {
+        const userData = {
+          name: "Test User",
+          username: "testuser",
+          email: "testuser@example.com",
+          password: "password123",
+        };
 
-    database.query.mockResolvedValueOnce({
-      rowCount: 1,
-      rows: [mockUser],
-    });
+        await fetch("http://localhost:3000/api/v1/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        });
 
-    const mockParams = { username: "john123" };
-    const mockRequest = {};
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/testuser",
+        );
 
-    const response = await GET(mockRequest, { params: mockParams });
+        const responseBody = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(mockUser);
-  });
+        delete responseBody.id;
+        delete responseBody.created_at;
 
-  it("should handle user not found", async () => {
-    database.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+        expect(response.status).toBe(200);
+        expect(responseBody).toEqual(userData);
+      });
 
-    const mockParams = { username: "nonexistent" };
-    const mockRequest = {};
+      test("should return 404 for a non-existing user", async () => {
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/nonexistent",
+        );
 
-    const response = await GET(mockRequest, { params: mockParams });
+        const error = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      name: "not_found_error",
-      message: "Usuário não encontrado.",
-      action: "Verifique se o Usuário existe e tente novamente.",
-      status_code: 404,
-    });
-  });
-
-  it("should handle database errors", async () => {
-    database.query.mockRejectedValueOnce(new Error("Database error"));
-
-    const mockParams = { username: "john123" };
-    const mockRequest = {};
-
-    const response = await GET(mockRequest, { params: mockParams });
-
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      name: "internal_server_error",
-      message: "Erro interno no servidor.",
-      action: "Tente novamente mais tarde ou contate o suporte.",
-      status_code: 500,
+        expect(response.status).toBe(404);
+        expect(error).toEqual({
+          name: "not_found_error",
+          message: "Usuário não encontrado.",
+          action: "Verifique se o Usuário existe e tente novamente.",
+          status_code: 404,
+        });
+      });
     });
   });
 });

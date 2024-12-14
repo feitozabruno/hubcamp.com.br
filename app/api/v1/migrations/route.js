@@ -1,55 +1,27 @@
-import migrationRunner from "node-pg-migrate";
-import { resolve } from "node:path";
-import database from "infra/database.js";
+import migrationManager from "infra/models/migrationModel.js";
+import { handleError, MigrationError } from "utils/errors";
 
-const MIGRATIONS_DIR = resolve("infra", "migrations");
-
-async function handleMigration({ dryRun, statusOnSuccess }) {
-  let dbClient;
-
+export async function GET() {
   try {
-    dbClient = await database.getNewClient();
-
-    const migrationOptions = {
-      dbClient,
-      dryRun,
-      dir: MIGRATIONS_DIR,
-      direction: "up",
-      verbose: true,
-      migrationsTable: "pgmigrations",
-    };
-
-    const migrations = await migrationRunner(migrationOptions);
-
-    return Response.json(migrations, {
-      status: statusOnSuccess(migrations),
-    });
-  } catch (error) {
-    console.error("Migration error:", error);
-
-    return Response.json(
-      { error: "An error occurred during migration." },
-      {
-        status: 500,
-      },
-    );
-  } finally {
-    if (dbClient) {
-      await dbClient.end();
+    const migrations = await migrationManager.runMigrations({ dryRun: true });
+    if (!Array.isArray(migrations)) {
+      throw new MigrationError();
     }
+    return Response.json(migrations, { status: 200 });
+  } catch (err) {
+    return handleError(err);
   }
 }
 
-export async function GET() {
-  return handleMigration({
-    dryRun: true,
-    statusOnSuccess: () => 200,
-  });
-}
-
 export async function POST() {
-  return handleMigration({
-    dryRun: false,
-    statusOnSuccess: (migrations) => (migrations.length > 0 ? 201 : 200),
-  });
+  try {
+    const migrations = await migrationManager.runMigrations();
+    if (!Array.isArray(migrations)) {
+      throw new MigrationError();
+    }
+    const status = migrations.length > 0 ? 201 : 200;
+    return Response.json(migrations, { status });
+  } catch (err) {
+    return handleError(err);
+  }
 }

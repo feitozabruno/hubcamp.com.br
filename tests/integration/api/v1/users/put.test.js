@@ -1,97 +1,159 @@
-import { PUT } from "app/api/v1/users/[username]/route.js";
-import database from "infra/database";
+import orchestrator from "tests/orchestrator";
 
-// Mock do banco de dados
-jest.mock("infra/database");
+beforeAll(async () => {
+  await orchestrator.waitForAllServices();
+  await orchestrator.clearDatabase();
+  await orchestrator.runMigrations();
+});
 
-describe("PUT /api/v1/users/[username]", () => {
-  it("should update user details successfully", async () => {
-    const updatedUser = {
-      id: 1,
-      name: "John Doe Updated",
-      username: "john123",
-      email: "john.updated@example.com",
-    };
+describe("PUT /api/v1/users[username]", () => {
+  describe("User update", () => {
+    describe("Valid cases", () => {
+      test("should update the data of an existing user", async () => {
+        const userData = {
+          name: "Test User",
+          username: "testuser",
+          email: "testuser@example.com",
+          password: "password123",
+        };
 
-    database.query.mockResolvedValueOnce({
-      rowCount: 1,
-      rows: [updatedUser],
-    });
+        const updatedUserData = {
+          name: "Updated Test User",
+          username: "updatedtestuser",
+          email: "updatedtestuser@example.com",
+          password: "updatedpassword123",
+        };
 
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "John Doe Updated",
-        email: "john.updated@example.com",
-      }),
-    };
+        await fetch("http://localhost:3000/api/v1/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        });
 
-    const mockParams = { username: "john123" };
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/testuser",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedUserData),
+          },
+        );
 
-    const response = await PUT(mockRequest, { params: mockParams });
+        const responseBody = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(updatedUser);
-  });
+        delete responseBody.id;
+        delete responseBody.created_at;
 
-  it("should handle no data to update", async () => {
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({}),
-    };
+        expect(response.status).toBe(200);
+        expect(responseBody).toEqual(updatedUserData);
+      });
 
-    const mockParams = { username: "john123" };
+      test("should throw an error when trying to update a non-existent user", async () => {
+        const updateData = {
+          name: "Nonexistent User",
+        };
 
-    const response = await PUT(mockRequest, { params: mockParams });
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/nonexistentuser",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updateData),
+          },
+        );
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      name: "validation_error",
-      message: "Nenhum dado para atualizar foi enviado.",
-      action: "Verifique os campos enviados e tente novamente.",
-      status_code: 400,
-    });
-  });
+        const error = await response.json();
 
-  it("should handle user not found", async () => {
-    database.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+        expect(response.status).toBe(404);
 
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "John Doe Updated",
-      }),
-    };
+        expect(error).toEqual({
+          name: "not_found_error",
+          message: "Usuário não encontrado.",
+          action: "Verifique se o Usuário existe e tente novamente.",
+          status_code: 404,
+        });
+      });
 
-    const mockParams = { username: "nonexistent" };
+      test("should throw an error when sending an empty body request", async () => {
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/updatedtestuser",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}), // Corpo vazio
+          },
+        );
 
-    const response = await PUT(mockRequest, { params: mockParams });
+        expect(response.status).toBe(400);
 
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      name: "not_found_error",
-      message: "Usuário não encontrado.",
-      action: "Verifique se o Usuário existe e tente novamente.",
-      status_code: 404,
-    });
-  });
+        const error = await response.json();
+        expect(error).toEqual({
+          name: "validation_error",
+          message: "Nenhum dado para atualizar foi enviado.",
+          action: "Verifique os campos enviados e tente novamente.",
+          status_code: 400,
+        });
+      });
 
-  it("should handle database errors", async () => {
-    database.query.mockRejectedValueOnce(new Error("Database error"));
+      test("should throw an error when sending invalid fields for update", async () => {
+        const invalidData = {
+          invalidField: "Invalid Value",
+        };
 
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({
-        name: "John Doe Updated",
-      }),
-    };
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/updatedtestuser",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(invalidData),
+          },
+        );
 
-    const mockParams = { username: "john123" };
+        expect(response.status).toBe(400);
 
-    const response = await PUT(mockRequest, { params: mockParams });
+        const error = await response.json();
+        expect(error).toEqual({
+          name: "validation_error",
+          message: "Nenhum campo permitido para atualização foi enviado.",
+          action: "Verifique os campos enviados e tente novamente.",
+          status_code: 400,
+        });
+      });
 
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      name: "internal_server_error",
-      message: "Erro interno no servidor.",
-      action: "Tente novamente mais tarde ou contate o suporte.",
-      status_code: 500,
+      test("should throw an error when sending an invalid (non-JSON) body", async () => {
+        const response = await fetch(
+          "http://localhost:3000/api/v1/users/updatedtestuser",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: "Invalid JSON",
+          },
+        );
+
+        expect(response.status).toBe(400);
+
+        const error = await response.json();
+        expect(error).toEqual({
+          name: "request_body_error",
+          message:
+            "Não foi possível converter o corpo da requisição para JSON.",
+          action:
+            "Verifique o formato do corpo da requisição e tente novamente.",
+          status_code: 400,
+        });
+      });
     });
   });
 });
