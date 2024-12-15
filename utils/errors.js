@@ -96,7 +96,7 @@ export class NotFoundError extends BaseError {
 export class InvalidCredentials extends BaseError {
   constructor(message) {
     super(
-      "invalid_crendentials_error",
+      "invalid_credentials_error",
       message || "Senha inválida.",
       "Verifique os dados de login e tente novamente.",
       401,
