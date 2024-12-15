@@ -35,9 +35,9 @@ export async function updateUser(updateData, currentUsername) {
   const values = [];
   let index = 1;
 
-  const hashedPassword = await hashPassword(updateData.password);
-
-  updateData.password = hashedPassword;
+  if (updateData.password) {
+    updateData.password = await hashPassword(updateData.password);
+  }
 
   for (const [key, value] of Object.entries(updateData)) {
     setClauses.push(`${key} = $${index}`);
