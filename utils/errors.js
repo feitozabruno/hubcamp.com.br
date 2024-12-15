@@ -87,8 +87,19 @@ export class NotFoundError extends BaseError {
     super(
       "not_found_error",
       `${resource} não encontrado.`,
-      `Verifique se o ${resource} existe e tente novamente.`,
+      `Verifique se o ${resource.toLocaleLowerCase()} existe e tente novamente.`,
       404,
+    );
+  }
+}
+
+export class InvalidCredentials extends BaseError {
+  constructor(message) {
+    super(
+      "invalid_crendentials_error",
+      message || "Senha inválida.",
+      "Verifique os dados de login e tente novamente.",
+      401,
     );
   }
 }
@@ -113,6 +124,12 @@ export function handleError(err) {
   }
 
   if (err instanceof MigrationError) {
+    return Response.json(err, {
+      status: err.status_code,
+    });
+  }
+
+  if (err instanceof InvalidCredentials) {
     return Response.json(err, {
       status: err.status_code,
     });
