@@ -40,12 +40,9 @@ export async function PUT(request, { params }) {
 
     const updatableFields = ["name", "username", "email", "password"];
 
-    const updateData = Object.keys(body)
-      .filter((field) => updatableFields.includes(field))
-      .reduce((acc, field) => {
-        acc[field] = body[field];
-        return acc;
-      }, {});
+    const updateData = Object.fromEntries(
+      Object.entries(body).filter(([key]) => updatableFields.includes(key)),
+    );
 
     if (Object.keys(updateData).length === 0) {
       throw new ValidationError(
