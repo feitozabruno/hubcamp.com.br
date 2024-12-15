@@ -1,4 +1,5 @@
 import orchestrator from "tests/orchestrator";
+import bcrypt from "bcrypt";
 
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
@@ -31,6 +32,15 @@ describe("GET /api/v1/users[username]", () => {
 
         const responseBody = await response.json();
 
+        const pw = await bcrypt.compare(
+          userData.password,
+          responseBody.password,
+        );
+
+        if (pw) {
+          responseBody.password = userData.password;
+        }
+
         delete responseBody.id;
         delete responseBody.created_at;
 
@@ -49,7 +59,7 @@ describe("GET /api/v1/users[username]", () => {
         expect(error).toEqual({
           name: "not_found_error",
           message: "Usuário não encontrado.",
-          action: "Verifique se o Usuário existe e tente novamente.",
+          action: "Verifique se o usuário existe e tente novamente.",
           status_code: 404,
         });
       });

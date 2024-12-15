@@ -1,4 +1,4 @@
-import database from "infra/database";
+import { getUserByEmailOrUsername, updateUser } from "infra/models/userModel";
 import {
   handleError,
   NotFoundError,
@@ -10,10 +10,7 @@ export async function GET(request, { params }) {
   const { username } = await params;
 
   try {
-    const result = await database.query(
-      "SELECT * FROM users WHERE username = $1",
-      [username],
-    );
+    const result = await getUserByEmailOrUsername(username);
 
     if (result.rowCount === 0) {
       throw new NotFoundError("Usuário");
@@ -43,12 +40,9 @@ export async function PUT(request, { params }) {
 
     const updatableFields = ["name", "username", "email", "password"];
 
-    const updateData = Object.keys(body)
-      .filter((field) => updatableFields.includes(field))
-      .reduce((acc, field) => {
-        acc[field] = body[field];
-        return acc;
-      }, {});
+    const updateData = Object.fromEntries(
+      Object.entries(body).filter(([key]) => updatableFields.includes(key)),
+    );
 
     if (Object.keys(updateData).length === 0) {
       throw new ValidationError(
@@ -56,26 +50,7 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const setClauses = [];
-    const values = [];
-    let index = 1;
-
-    for (const [key, value] of Object.entries(updateData)) {
-      setClauses.push(`${key} = $${index}`);
-      values.push(value);
-      index++;
-    }
-
-    const query = `
-      UPDATE users
-      SET ${setClauses.join(", ")}
-      WHERE username = $${index}
-      RETURNING *;
-    `;
-
-    values.push(currentUsername);
-
-    const result = await database.query(query, values);
+    const result = await updateUser(updateData, currentUsername);
 
     if (result.rowCount === 0) {
       throw new NotFoundError("Usuário");
