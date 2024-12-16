@@ -29,10 +29,33 @@ async function runMigrations() {
   await migrationManager.runMigrations();
 }
 
+async function fetchLastEmail() {
+  const response = await fetch("http://localhost:1080/messages");
+  const messages = await response.json();
+
+  if (messages.length === 0) {
+    throw new Error("Nenhum email encontrado.");
+  }
+
+  const lastMessage = messages[messages.length - 1];
+
+  // Buscando detalhes do e-mail
+  const emailDetailsResponse = await fetch(
+    `http://localhost:1080/messages/${lastMessage.id}.json`,
+  );
+  return emailDetailsResponse.json();
+}
+
+async function clearMailCatcherInbox() {
+  await fetch("http://localhost:1080/messages", { method: "DELETE" });
+}
+
 const orchestrator = {
   waitForAllServices,
   clearDatabase,
   runMigrations,
+  fetchLastEmail,
+  clearMailCatcherInbox,
 };
 
 export default orchestrator;
