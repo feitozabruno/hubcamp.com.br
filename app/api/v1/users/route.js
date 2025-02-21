@@ -1,5 +1,5 @@
-import { createUser } from "infra/models/userModel.js";
-import { handleError, RequestBodyError } from "utils/errors";
+import { createUser } from "models/user.js";
+import { handleError, RequestBodyError } from "infra/errors.js";
 
 export async function POST(request) {
   try {

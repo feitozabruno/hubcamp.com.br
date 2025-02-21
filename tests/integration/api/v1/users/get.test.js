@@ -7,18 +7,19 @@ beforeAll(async () => {
   await orchestrator.runMigrations();
 });
 
+const BASE_URL = "http://localhost:3000";
+
 describe("GET /api/v1/users[username]", () => {
   describe("User fetch", () => {
     describe("Valid cases", () => {
       test("should return the data of an existing user", async () => {
         const userData = {
-          name: "Test User",
           username: "testuser",
           email: "testuser@example.com",
           password: "password123",
         };
 
-        await fetch("http://localhost:3000/api/v1/users", {
+        await fetch(`${BASE_URL}/api/v1/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -26,9 +27,7 @@ describe("GET /api/v1/users[username]", () => {
           body: JSON.stringify(userData),
         });
 
-        const response = await fetch(
-          "http://localhost:3000/api/v1/users/testuser",
-        );
+        const response = await fetch(`${BASE_URL}/api/v1/users/testuser`);
 
         const responseBody = await response.json();
 
@@ -43,15 +42,14 @@ describe("GET /api/v1/users[username]", () => {
 
         delete responseBody.id;
         delete responseBody.created_at;
+        delete responseBody.updated_at;
 
         expect(response.status).toBe(200);
         expect(responseBody).toEqual(userData);
       });
 
       test("should return 404 for a non-existing user", async () => {
-        const response = await fetch(
-          "http://localhost:3000/api/v1/users/nonexistent",
-        );
+        const response = await fetch(`${BASE_URL}/api/v1/users/nonexistent`);
 
         const error = await response.json();
 

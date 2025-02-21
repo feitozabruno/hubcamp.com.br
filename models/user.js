@@ -1,5 +1,5 @@
-import database from "../database.js";
-import { ValidationError } from "utils/errors";
+import database from "infra/database.js";
+import { ValidationError } from "infra/errors.js";
 import bcrypt from "bcrypt";
 
 const SALT_ROUNDS = 10;
@@ -8,16 +8,16 @@ async function hashPassword(password) {
   return await bcrypt.hash(password, SALT_ROUNDS);
 }
 
-export async function createUser({ name, username, email, password }) {
-  if (!name || !username || !email || !password) {
+export async function createUser({ username, email, password }) {
+  if (!username || !email || !password) {
     throw new ValidationError();
   }
 
   const hashedPassword = await hashPassword(password);
 
   await database.query(
-    "INSERT INTO users (name, username, email, password) VALUES ($1, $2, $3, $4)",
-    [name, username, email, hashedPassword],
+    "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+    [username, email, hashedPassword],
   );
 }
 

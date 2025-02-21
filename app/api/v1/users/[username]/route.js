@@ -1,10 +1,10 @@
-import { getUserByEmailOrUsername, updateUser } from "infra/models/userModel";
+import { getUserByEmailOrUsername, updateUser } from "models/user.js";
 import {
   handleError,
   NotFoundError,
   RequestBodyError,
   ValidationError,
-} from "utils/errors";
+} from "infra/errors.js";
 
 export async function GET(request, { params }) {
   const { username } = await params;

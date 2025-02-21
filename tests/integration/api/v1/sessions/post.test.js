@@ -7,17 +7,18 @@ beforeAll(async () => {
   await orchestrator.runMigrations();
 });
 
+const BASE_URL = "http://localhost:3000";
+
 describe("POST /api/v1/sessions", () => {
   describe("Create Session", () => {
     test("should log in with valid credentials", async () => {
       const userData = {
-        name: "Test User",
         username: "testuser",
         email: "testuser@example.com",
         password: "password123",
       };
 
-      await fetch("http://localhost:3000/api/v1/users", {
+      await fetch(`${BASE_URL}/api/v1/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -25,7 +26,7 @@ describe("POST /api/v1/sessions", () => {
         body: JSON.stringify(userData),
       });
 
-      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+      const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,12 +42,18 @@ describe("POST /api/v1/sessions", () => {
       expect(responseBody).toEqual({ message: "Logged in" });
 
       const sessionResult = await database.query("SELECT * FROM sessions");
+      const userResult = await database.query(
+        "SELECT * FROM users WHERE username = $1",
+        [userData.username],
+      );
+
       expect(sessionResult.rowCount).toBe(1);
-      expect(sessionResult.rows[0].user_id).toBe(1);
+      expect(userResult.rowCount).toBe(1);
+      expect(sessionResult.rows[0].user_id).toBe(userResult.rows[0].id);
     });
 
     test("should return 404 if user is not found", async () => {
-      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+      const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +76,7 @@ describe("POST /api/v1/sessions", () => {
     });
 
     test("should return 401 if password is incorrect", async () => {
-      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+      const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

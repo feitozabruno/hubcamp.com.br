@@ -11,7 +11,6 @@ describe("POST /api/v1/users", () => {
     describe("Valid cases", () => {
       test("should create a user with all valid fields", async () => {
         const userData = {
-          name: "Test User",
           username: "testuser",
           email: "testuser@example.com",
           password: "password123",

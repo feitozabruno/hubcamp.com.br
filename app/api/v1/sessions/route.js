@@ -1,13 +1,13 @@
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
-import { getUserByEmailOrUsername } from "infra/models/userModel.js";
-import { createSession, deleteSession } from "infra/models/sessionModel";
+import { getUserByEmailOrUsername } from "models/user.js";
+import { createSession, deleteSession } from "models/session.js";
 import {
   handleError,
   InvalidCredentials,
   NotFoundError,
   RequestBodyError,
-} from "utils/errors";
+} from "infra/errors.js";
 
 export async function POST(request) {
   try {
