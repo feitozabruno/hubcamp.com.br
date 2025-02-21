@@ -7,6 +7,8 @@ beforeAll(async () => {
   await orchestrator.runMigrations();
 });
 
+const BASE_URL = "http://localhost:3000";
+
 describe("DELETE /api/v1/sessions", () => {
   describe("Delete Session", () => {
     test("should log out successfully", async () => {
@@ -17,7 +19,7 @@ describe("DELETE /api/v1/sessions", () => {
         password: "password123",
       };
 
-      await fetch("http://localhost:3000/api/v1/users", {
+      await fetch(`${BASE_URL}/api/v1/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -25,31 +27,25 @@ describe("DELETE /api/v1/sessions", () => {
         body: JSON.stringify(userData),
       });
 
-      const loginResponse = await fetch(
-        "http://localhost:3000/api/v1/sessions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            identifier: "testuser",
-            password: "password123",
-          }),
+      const loginResponse = await fetch(`${BASE_URL}/api/v1/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          identifier: "testuser",
+          password: "password123",
+        }),
+      });
 
       const cookie = loginResponse.headers.get("set-cookie");
 
-      const logoutResponse = await fetch(
-        "http://localhost:3000/api/v1/sessions",
-        {
-          method: "DELETE",
-          headers: {
-            Cookie: cookie,
-          },
+      const logoutResponse = await fetch(`${BASE_URL}/api/v1/sessions`, {
+        method: "DELETE",
+        headers: {
+          Cookie: cookie,
         },
-      );
+      });
 
       const responseBody = await logoutResponse.json();
 
@@ -61,7 +57,7 @@ describe("DELETE /api/v1/sessions", () => {
     });
 
     test("should return 400 if no active session is found", async () => {
-      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+      const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
         method: "DELETE",
       });
 

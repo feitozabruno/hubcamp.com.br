@@ -12,14 +12,12 @@ describe("PUT /api/v1/users[username]", () => {
     describe("Valid cases", () => {
       test("should update the data of an existing user", async () => {
         const userData = {
-          name: "Test User",
           username: "testuser",
           email: "testuser@example.com",
           password: "password123",
         };
 
         const updatedUserData = {
-          name: "Updated Test User",
           username: "updatedtestuser",
           email: "updatedtestuser@example.com",
           password: "updatedpassword123",
@@ -57,6 +55,7 @@ describe("PUT /api/v1/users[username]", () => {
 
         delete responseBody.id;
         delete responseBody.created_at;
+        delete responseBody.updated_at;
 
         expect(response.status).toBe(200);
         expect(responseBody).toEqual(updatedUserData);
@@ -64,7 +63,7 @@ describe("PUT /api/v1/users[username]", () => {
 
       test("should throw an error when trying to update a non-existent user", async () => {
         const updateData = {
-          name: "Nonexistent User",
+          username: "NonexistentUser",
         };
 
         const response = await fetch(

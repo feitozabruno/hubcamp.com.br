@@ -5,7 +5,7 @@ exports.up = (pgm) => {
       primaryKey: true,
     },
     user_id: {
-      type: "integer",
+      type: "uuid",
       notNull: true,
       references: "users(id)",
       onDelete: "CASCADE",
@@ -18,7 +18,7 @@ exports.up = (pgm) => {
     created_at: {
       type: "timestamp",
       notNull: true,
-      default: pgm.func("current_timestamp"),
+      default: pgm.func("now()"),
     },
     expires_at: {
       type: "timestamp",

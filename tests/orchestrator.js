@@ -1,6 +1,6 @@
 import retry from "async-retry";
 import database from "infra/database";
-import migrationManager from "infra/models/migrationModel.js";
+import migrator from "models/migrator.js";
 
 async function waitForAllServices() {
   await waitForWebServer();
@@ -26,7 +26,7 @@ async function clearDatabase() {
 }
 
 async function runMigrations() {
-  await migrationManager.runMigrations();
+  await migrator.runPendingMigrations();
 }
 
 async function fetchLastEmail() {
