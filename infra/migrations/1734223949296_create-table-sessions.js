@@ -16,12 +16,12 @@ exports.up = (pgm) => {
       unique: true,
     },
     created_at: {
-      type: "timestamp",
+      type: "timestamptz",
       notNull: true,
       default: pgm.func("now()"),
     },
     expires_at: {
-      type: "timestamp",
+      type: "timestamptz",
       notNull: true,
     },
   });

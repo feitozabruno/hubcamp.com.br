@@ -25,7 +25,7 @@ async function clearDatabase() {
   await database.query("drop schema public cascade; create schema public;");
 }
 
-async function runMigrations() {
+async function runPendingMigrations() {
   await migrator.runPendingMigrations();
 }
 
@@ -53,7 +53,7 @@ async function clearMailCatcherInbox() {
 const orchestrator = {
   waitForAllServices,
   clearDatabase,
-  runMigrations,
+  runPendingMigrations,
   fetchLastEmail,
   clearMailCatcherInbox,
 };

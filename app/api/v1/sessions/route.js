@@ -1,81 +1,65 @@
-import crypto from "node:crypto";
-import bcrypt from "bcrypt";
-import { getUserByEmailOrUsername } from "models/user.js";
+import { NextResponse } from "next/server";
 import { createSession, deleteSession } from "models/session.js";
-import {
-  handleError,
-  InvalidCredentials,
-  NotFoundError,
-  RequestBodyError,
-} from "infra/errors.js";
+import { ValidationError } from "infra/errors.js";
+import { controller } from "infra/controller.js";
 
-export async function POST(request) {
+async function postHandler(request) {
+  let body;
   try {
-    let body;
-
-    try {
-      body = await request.json();
-    } catch {
-      throw new RequestBodyError();
-    }
-
-    const { identifier, password } = body;
-
-    const userQuery = await getUserByEmailOrUsername(identifier);
-
-    if (userQuery.rowCount === 0) {
-      throw new NotFoundError("Usuário/Email");
-    }
-
-    const user = userQuery.rows[0];
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      throw new InvalidCredentials();
-    }
-
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Sessão válida por 7 dias
-
-    await createSession(user.id, token, expiresAt);
-
-    const response = new Response(JSON.stringify({ message: "Logged in" }), {
-      status: 200,
+    body = await request.json();
+  } catch (error) {
+    throw new ValidationError({
+      message: "Erro ao processar o corpo da requisição.",
+      action: "Verifique se o corpo da requisição está correto.",
+      cause: error,
     });
-    response.headers.set(
-      "Set-Cookie",
-      `session_token=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}`,
-    );
-
-    return response;
-  } catch (err) {
-    return handleError(err);
   }
+
+  const { identifier, password } = body;
+
+  if (!identifier || !password) {
+    throw new ValidationError({
+      message: "Campos obrigatórios não foram preenchidos.",
+      action: "Preencha os campos 'identifier' e 'password' e tente novamente.",
+    });
+  }
+
+  const token = await createSession(identifier, password);
+
+  return NextResponse.json(
+    { message: "Login realizado com sucesso!" },
+    {
+      status: 200,
+      headers: {
+        "Set-Cookie": `session_token=${token.code}; HttpOnly; Path=/; Max-Age=${token.expiration}; Secure`,
+      },
+    },
+  );
 }
 
-export async function DELETE(request) {
+async function deleteHandler(request) {
   const cookies = request.headers.get("cookie");
   const token = cookies?.match(/session_token=([^;]*)/)?.[1];
 
   if (!token) {
-    return Response.json(
-      { message: "No active session found" },
+    return NextResponse.json(
+      { message: "Nenhuma sessão ativa encontrada." },
       { status: 400 },
     );
   }
 
-  try {
-    await deleteSession(token);
+  await deleteSession(token);
 
-    return new Response(JSON.stringify({ message: "Logged out" }), {
+  return NextResponse.json(
+    { message: "Logout realizado com sucesso!" },
+    {
       status: 200,
       headers: {
-        "Set-Cookie": `session_token=; Path=/; HttpOnly; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-        "Content-Type": "application/json",
+        "Set-Cookie": "session_token=; HttpOnly; Path=/; Max-Age=0; Secure;",
       },
-    });
-  } catch (err) {
-    return handleError(err);
-  }
+    },
+  );
 }
+
+export const POST = controller(postHandler);
+export const DELETE = controller(deleteHandler);

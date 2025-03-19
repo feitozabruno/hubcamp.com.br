@@ -24,7 +24,7 @@ async function executeMigration(options = {}) {
     });
   } catch (error) {
     throw new ServiceError({
-      message: "Falha ao executar migração.",
+      message: "Falha ao executar migrações.",
       cause: error,
     });
   } finally {
