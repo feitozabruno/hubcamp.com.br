@@ -1,23 +1,21 @@
-import { createUser } from "models/user.js";
-import { handleError, RequestBodyError } from "infra/errors.js";
+import { NextResponse } from "next/server";
+import user from "models/user.js";
+import { ValidationError } from "infra/errors.js";
+import { controller } from "infra/controller.js";
 
-export async function POST(request) {
-  try {
-    let userData;
+async function postHandler(request) {
+  const userData = await request.json();
 
-    try {
-      userData = await request.json();
-    } catch {
-      throw new RequestBodyError();
-    }
-
-    await createUser(userData);
-
-    return Response.json(
-      { message: `Usuário ${userData.username} criado com sucesso!` },
-      { status: 201 },
-    );
-  } catch (err) {
-    return handleError(err);
+  if (!userData.username || !userData.email || !userData.password) {
+    throw new ValidationError({
+      message: "Os campos username, email e password são obrigatórios.",
+      action: "Preencha os campos obrigatórios e tente novamente.",
+    });
   }
+
+  const createdUser = await user.create(userData);
+
+  return NextResponse.json(createdUser, { status: 201 });
 }
+
+export const POST = controller(postHandler);

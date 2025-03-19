@@ -1,42 +1,107 @@
 import database from "infra/database.js";
-import { ValidationError } from "infra/errors.js";
 import bcrypt from "bcrypt";
+import { NotFoundError, ValidationError } from "infra/errors.js";
 
-const SALT_ROUNDS = 10;
+async function create(userInputValues) {
+  await validateUniqueEmail(userInputValues.email);
+  await validateUniqueUsername(userInputValues.username);
 
-async function hashPassword(password) {
-  return await bcrypt.hash(password, SALT_ROUNDS);
-}
+  const newUser = await runInsertQuery(userInputValues);
+  return newUser;
 
-export async function createUser({ username, email, password }) {
-  if (!username || !email || !password) {
-    throw new ValidationError();
+  async function validateUniqueEmail() {
+    const results = await database.query({
+      text: `
+        SELECT
+          email
+        FROM
+          users
+        WHERE
+          LOWER(email) = LOWER($1)
+        ;`,
+      values: [userInputValues.email],
+    });
+
+    if (results.rowCount > 0) {
+      throw new ValidationError({
+        message: "O email informado já está sendo utilizado.",
+        action: "Utilize outro email para realizar o cadastro.",
+      });
+    }
   }
 
-  const hashedPassword = await hashPassword(password);
+  async function validateUniqueUsername() {
+    const results = await database.query({
+      text: `
+        SELECT
+          username
+        FROM
+          users
+        WHERE
+          LOWER(username) = LOWER($1)
+        ;`,
+      values: [userInputValues.username],
+    });
 
-  await database.query(
-    "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
-    [username, email, hashedPassword],
-  );
+    if (results.rowCount > 0) {
+      throw new ValidationError({
+        message: "O username informado já está sendo utilizado.",
+        action: "Utilize outro username para realizar o cadastro.",
+      });
+    }
+  }
+
+  async function runInsertQuery(userInputValues) {
+    const hashedPassword = await bcrypt.hash(userInputValues.password, 10);
+
+    const results = await database.query({
+      text: `
+        INSERT INTO
+          users (username, email, password)
+        VALUES
+          ($1, $2, $3)
+        RETURNING
+          *
+        ;`,
+      values: [userInputValues.username, userInputValues.email, hashedPassword],
+    });
+
+    return results.rows[0];
+  }
 }
 
-export async function getUserByEmailOrUsername(identifier) {
-  const result = await database.query(
-    "SELECT * FROM users WHERE email = $1 OR username = $1",
-    [identifier],
-  );
+async function findByUsernameOrEmail(identifier) {
+  const result = await database.query({
+    text: `
+      SELECT
+        *
+      FROM
+        users
+      WHERE
+        email = $1
+      OR
+        username = $1
+    ;`,
+    values: [identifier],
+  });
+
+  if (result.rowCount === 0) {
+    throw new NotFoundError({
+      message: "Usuário não encontrado.",
+      action: "Verifique o username informado e tente novamente.",
+    });
+  }
 
   return result;
 }
 
-export async function updateUser(updateData, currentUsername) {
+async function updateUser(updateData, currentUsername) {
   const setClauses = [];
   const values = [];
   let index = 1;
 
   if (updateData.password) {
-    updateData.password = await hashPassword(updateData.password);
+    updateData.password = await bcrypt.hash(updateData.password, 10);
   }
 
   for (const [key, value] of Object.entries(updateData)) {
@@ -45,14 +110,29 @@ export async function updateUser(updateData, currentUsername) {
     index++;
   }
 
-  const query = `
-    UPDATE users
-    SET ${setClauses.join(", ")}
-    WHERE username = $${index}
-    RETURNING *;
-  `;
+  setClauses.push(`updated_at = NOW()`);
 
   values.push(currentUsername);
 
-  return await database.query(query, values);
+  return await database.query({
+    text: `
+      UPDATE
+        users
+      SET
+        ${setClauses.join(", ")}
+      WHERE
+        username = $${index}
+      RETURNING
+        *
+    ;`,
+    values,
+  });
 }
+
+const user = {
+  create,
+  findByUsernameOrEmail,
+  updateUser,
+};
+
+export default user;
